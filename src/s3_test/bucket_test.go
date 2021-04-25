@@ -10,24 +10,19 @@ import (
 	"testing"
 )
 
-func TestBucketList(t *testing.T) {
-	access_key := "3DNM7Z57L4UXGDPMG3FU"
-	secret_key := "rWsCjB0u7GF4uPXTTaE0BU4rfNP33OE2WufJBJEt"
-	end_point := "192.168.3.162:7480" //endpoint设置，不要动
+var access_key = "3DNM7Z57L4UXGDPMG3FU"
+var secret_key = "rWsCjB0u7GF4uPXTTaE0BU4rfNP33OE2WufJBJEt"
+//var end_point = "192.168.3.162:7480"
+var end_point = "object.yujiang.com:7480"
+var bucket_name = "bucket1"
+var object_name = "all.yml"
+var object_version_id = "QkkvwSc9KUGFUjgzWXyLUAkiHKuol8P"
 
-	sess, err := session.NewSession(&aws.Config{
-		Credentials:      credentials.NewStaticCredentials(access_key, secret_key, ""),
-		Endpoint:         aws.String(end_point),
-		Region:           aws.String("default"),
-		DisableSSL:       aws.Bool(true),
-		//S3ForcePathStyle: aws.Bool(false), //virtual-host style方式，不要修改
-	})
+func init() {
 
-	svc := s3.New(sess)
+}
 
-	input := &s3.ListBucketsInput{}
-	result, err := svc.ListBuckets(input)
-
+func svcErrProcess(err error)  {
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
@@ -39,8 +34,162 @@ func TestBucketList(t *testing.T) {
 			// Message from an error.
 			fmt.Println(err.Error())
 		}
-		return
 	}
+}
+
+func svcGet() *s3.S3 {
+	sess, err := session.NewSession(&aws.Config{
+		Credentials:      credentials.NewStaticCredentials(access_key, secret_key, ""),
+		Endpoint:         aws.String(end_point),
+		Region:           aws.String("default"),
+		DisableSSL:       aws.Bool(true),
+	})
+
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	return s3.New(sess)
+}
+
+func TestPutBucketObjectLockExistingBuckets(t *testing.T) {
+	svc := svcGet()
+	input := &s3.PutObjectLockConfigurationInput{
+		Bucket: aws.String(bucket_name),
+	}
+	resule, err := svc.PutObjectLockConfiguration(input)
+	svcErrProcess(err)
+	fmt.Println(resule)
+}
+
+func TestPutBucketObjectLockExistingBucketsWithObjectLockConfigurationEnable(t *testing.T) {
+	/*
+	<?xml version="1.0" encoding="UTF-8"?>
+	<ObjectLockConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+	   <ObjectLockEnabled>string</ObjectLockEnabled>
+	   <Rule>
+	      <DefaultRetention>
+	         <Days>integer</Days>
+	         <Mode>string</Mode>
+	         <Years>integer</Years>
+	      </DefaultRetention>
+	   </Rule>
+	</ObjectLockConfiguration>
+	*/
+	svc := svcGet()
+	input := &s3.PutObjectLockConfigurationInput{
+		Bucket: aws.String(bucket_name),
+		ObjectLockConfiguration:&s3.ObjectLockConfiguration{
+			ObjectLockEnabled: aws.String("Enabled"),
+			Rule: &s3.ObjectLockRule{
+				DefaultRetention: &s3.DefaultRetention{
+					Mode: aws.String("COMPLIANCE"),
+					Days: aws.Int64(1),
+				},
+			},
+		},
+	}
+	resule, err := svc.PutObjectLockConfiguration(input)
+	svcErrProcess(err)
+	fmt.Println(resule)
+}
+
+func TestPutBucketObjectLockExistingBucketsWithObjectLockConfigurationDisable(t *testing.T) {
+	/*
+		<?xml version="1.0" encoding="UTF-8"?>
+		<ObjectLockConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+		   <ObjectLockEnabled>string</ObjectLockEnabled>
+		   <Rule>
+		      <DefaultRetention>
+		         <Days>integer</Days>
+		         <Mode>string</Mode>
+		         <Years>integer</Years>
+		      </DefaultRetention>
+		   </Rule>
+		</ObjectLockConfiguration>
+	*/
+	svc := svcGet()
+	input := &s3.PutObjectLockConfigurationInput{
+		Bucket: aws.String(bucket_name),
+		ObjectLockConfiguration:&s3.ObjectLockConfiguration{
+			ObjectLockEnabled: aws.String("Disable"),
+			Rule: &s3.ObjectLockRule{
+				DefaultRetention: &s3.DefaultRetention{
+					Mode: aws.String("COMPLIANCE"),
+					Days: aws.Int64(1),
+				},
+			},
+		},
+	}
+	resule, err := svc.PutObjectLockConfiguration(input)
+	svcErrProcess(err)
+	fmt.Println(resule)
+}
+
+func TestGetBucketObjectLockEnabled(t *testing.T) {
+	svc := svcGet()
+
+	input := &s3.GetObjectLockConfigurationInput{
+		Bucket: aws.String(bucket_name),
+	}
+
+	result, err := svc.GetObjectLockConfiguration(input)
+	svcErrProcess(err)
+	fmt.Println(result)
+}
+
+func TestBucketCreateEnableBucketObjectLock(t *testing.T) {
+	svc := svcGet()
+
+	input := &s3.CreateBucketInput{
+		Bucket: aws.String(bucket_name),
+		ObjectLockEnabledForBucket: aws.Bool(true),
+	}
+
+	result, err := svc.CreateBucket(input)
+
+	svcErrProcess(err)
+
+	fmt.Println(result)
+}
+
+
+func TestBucketList(t *testing.T) {
+
+	svc := svcGet()
+
+	input := &s3.ListBucketsInput{}
+	result, err := svc.ListBuckets(input)
+
+	svcErrProcess(err)
+
+	fmt.Println(result)
+}
+
+func TestDeleteObjectLockObject(t *testing.T) {
+	svc := svcGet()
+	input := &s3.DeleteObjectInput{
+		Bucket: aws.String(bucket_name),
+		Key: aws.String(object_name),
+		BypassGovernanceRetention: aws.Bool(true),	// X_AMZ_BYPASS_GOVERNANCE_RETENTION
+		VersionId: aws.String(object_version_id),
+	}
+	result, err := svc.DeleteObject(input)
+
+	svcErrProcess(err)
+
+	fmt.Println(result)
+}
+
+func TestListObjectVersion(t *testing.T) {
+	svc := svcGet()
+	input :=&s3.ListObjectVersionsInput{
+		Bucket: aws.String(bucket_name),
+		//KeyMarker: aws.String(object_name),
+	}
+	result, err := svc.ListObjectVersions(input)
+
+	svcErrProcess(err)
 
 	fmt.Println(result)
 }
