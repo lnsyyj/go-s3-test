@@ -16,7 +16,7 @@ var secret_key = "rWsCjB0u7GF4uPXTTaE0BU4rfNP33OE2WufJBJEt"
 var end_point = "object.yujiang.com:7480"
 var bucket_name = "bucket1"
 var object_name = "all.yml"
-var object_version_id = "QkkvwSc9KUGFUjgzWXyLUAkiHKuol8P"
+var object_version_id = "iGvhLxzNmMzN-3arUX-aG7ShepAUZB4"
 
 func init() {
 
@@ -81,9 +81,18 @@ func TestPutBucketObjectLockExistingBucketsWithObjectLockConfigurationEnable(t *
 		Bucket: aws.String(bucket_name),
 		ObjectLockConfiguration:&s3.ObjectLockConfiguration{
 			ObjectLockEnabled: aws.String("Enabled"),
+			//ObjectLockEnabled: aws.String("Enabled"),
 			Rule: &s3.ObjectLockRule{
 				DefaultRetention: &s3.DefaultRetention{
-					Mode: aws.String("COMPLIANCE"),
+					Mode: aws.String("GOVERNANCE"),
+					//Mode: aws.String("COMPLIANCE"),
+					/*
+					$17 = {mode = {static npos = 18446744073709551615,
+					    _M_dataplus = {<std::allocator<char>> = {<__gnu_cxx::new_allocator<char>> = {<No data fields>}, <No data fields>},
+					      _M_p = 0x55c5c0952880 "COMPLIANCE"}, _M_string_length = 10, {_M_local_buf = "COMPLIANCE\000\067\320\177\000",
+					      _M_allocated_capacity = 5638868800558157635}}, retain_until_date = {__d = {__r = 1619419423121442805}}}
+
+					*/
 					Days: aws.Int64(1),
 				},
 			},
